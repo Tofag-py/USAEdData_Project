@@ -22,14 +22,18 @@ def get_files(url, destination):
         # Check if the file already exists in the destination folder
         file_name = url.split("/")[-1]
         file_path = os.path.join(destination, file_name)
+        print("Checking if file already exists...")
         if os.path.exists(file_path):
             print(f"File already exists: {file_path}")
         else:
             # Download the file using wget
+            print("file not found")
+            print("file downloading...")
             file_path = wget.download(url, out=destination)
             print(f"File downloaded successfully: {file_path}")
 
         # Extract the file using zipfile
+        print("Extracting file....")
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(destination)
         print("File successfully extracted")
