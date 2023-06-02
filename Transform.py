@@ -1,65 +1,55 @@
-ls
-cd files
-ls
-
 import pandas as pd
-df = pd.read_csv("Most-Recent-Cohorts-Institution.csv")
-df = pd.read_csv('Most-Recent-Cohorts-Institution.csv', usecols=range(23))
-df = pd.read_csv('Most-Recent-Cohorts-Institution.csv', usecols=range(23), dtype={'column_9': str})
-df = pd.read_csv('Most-Recent-Cohorts-Institution.csv', usecols=range(23), low_memory=False)
-print(df.columns.tolist())  # Print the list of column headers
-print(df.dtypes)  # Print the schema (data types) of the columns
-# Define the desired data types for the columns
-dtypes = {
-    'UNITID': int,
-    'OPEID': float,
-    'OPEID6': float,
-    'INSTNM': str,
-    'CITY': str,
-    'STABBR': str,
-    'ZIP': str,
-    'ACCREDAGENCY': str,
-    'INSTURL': str,
-    'NPCURL': str,
-    'SCH_DEG': float,
-    'HCM2': int,
-    'MAIN': int,
-    'NUMBRANCH': int,
-    'PREDDEG': int,
-    'HIGHDEG': int,
-    'CONTROL': int,
-    'ST_FIPS': int,
-    'REGION': int,
-    'LOCALE': float,
-    'LOCALE2': float,
-    'LATITUDE': float,
-    'LONGITUDE': float
-}
+from google.cloud import bigquery
+from Ingestfile import download_local
 
-# Convert the columns to the desired data types
-df = df.astype(dtypes)
+def transform(csv_path):
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(csv_path, usecols=range(23), low_memory=False)
 
-# Display the updated dataframe with the new data types
-print(df.dtypes)
-jupyter nbconvert --to script Transform.ipynb
-pwd
+    # Define the desired data types for the columns
+    dtypes = {
+        'UNITID': int,
+        'OPEID': float,
+        'OPEID6': float,
+        'INSTNM': str,
+        'CITY': str,
+        'STABBR': str,
+        'ZIP': str,
+        'ACCREDAGENCY': str,
+        'INSTURL': str,
+        'NPCURL': str,
+        'SCH_DEG': float,
+        'HCM2': int,
+        'MAIN': int,
+        'NUMBRANCH': int,
+        'PREDDEG': int,
+        'HIGHDEG': int,
+        'CONTROL': int,
+        'ST_FIPS': int,
+        'REGION': int,
+        'LOCALE': float,
+        'LOCALE2': float,
+        'LATITUDE': float,
+        'LONGITUDE': float
+    }
 
-ls
-import nbformat
-from nbformat.v4 import output_from_msg
-import pandas as pd
+    # Convert the columns to the desired data types
+    df = df.astype(dtypes)
 
-def notebook_to_script(notebook_file, script_file):
-    notebook = nbformat.read(notebook_file, as_version=4)
-    code_cells = [cell.source for cell in notebook.cells if cell.cell_type == 'code']
-    script = '\n'.join(code_cells)
+    return df
 
-    with open(script_file, 'w') as file:
-        file.write(script)
+def df_to_bigquery(df):
+    # Create a BigQuery client
+    client = bigquery.Client()
 
-# Specify the paths of the notebook and script files
-notebook_file = 'Transform.ipynb'
-script_file = 'your_script.py'
+    # Specify the BigQuery dataset and table to load the DataFrame
+    dataset_id = 'USAEdData_Project'
+    table_id = 'USAEdData_Project'
 
-# Convert the notebook to a script
-notebook_to_script(notebook_file, script_file)
+    # Write the DataFrame to BigQuery
+    job = client.load_table_from_dataframe(df, f'{dataset_id}.{table_id}')
+    job.result()  # Wait for the job to complete
+
+csv_path = download_local()
+df = transform(csv_path)
+df_to_bigquery(df)
