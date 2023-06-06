@@ -1,7 +1,13 @@
 import os
 import wget
 import zipfile
+#from airflow import DAG
+from prefect import task, flow
+import pandas as pd
+#from google.cloud import bigquery
 
+
+@task(log_prints=True)
 def make_destination():
     # Create a folder named "files" in the current directory
     folder_path = os.path.join(os.getcwd(), "files")
@@ -12,6 +18,7 @@ def make_destination():
         print(f"Failed to create destination folder: {folder_path}")
         return None
 
+@task(log_prints=True)
 def get_files(url, destination):
     if destination is None:
         print("Destination folder not available.")
@@ -49,12 +56,70 @@ def get_files(url, destination):
         print(f"Failed to download file from: {url}")
         print(e)
 
-def download_local():
+@task(log_prints=True)
+def transform(csv_path):
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(csv_path, usecols=range(23), low_memory=False)
+
+    # Define the desired data types for the columns
+    dtypes = {
+        'UNITID': int,
+        'OPEID': float,
+        'OPEID6': float,
+        'INSTNM': str,
+        'CITY': str,
+        'STABBR': str,
+        'ZIP': str,
+        'ACCREDAGENCY': str,
+        'INSTURL': str,
+        'NPCURL': str,
+        'SCH_DEG': float,
+        'HCM2': int,
+        'MAIN': int,
+        'NUMBRANCH': int,
+        'PREDDEG': int,
+        'HIGHDEG': int,
+        'CONTROL': int,
+        'ST_FIPS': int,
+        'REGION': int,
+        'LOCALE': float,
+        'LOCALE2': float,
+        'LATITUDE': float,
+        'LONGITUDE': float
+    }
+
+    # Convert the columns to the desired data types
+    df = df.astype(dtypes)
+
+    return df
+
+# @task(logprints=True)
+# def df_to_bigquery(df):
+#     # Create a BigQuery client
+#     client = bigquery.Client()
+
+#     # Specify the BigQuery dataset and table to load the DataFrame
+#     dataset_id = 'USAEdData_Project'
+#     table_id = 'USAEdData_Project'
+
+#     # Write the DataFrame to BigQuery
+#     job = client.load_table_from_dataframe(df, f'{dataset_id}.{table_id}')
+#     job.result()  # Wait for the job to complete
+
+
+@flow(log_prints=True)
+def download_to_bq():
     url = "https://ed-public-download.app.cloud.gov/downloads/Most-Recent-Cohorts-Institution_04192023.zip"
     
     destination = make_destination()
     csv_destination = get_files(url, destination)
 
-    return csv_destination
+    csv_path = csv_destination
+    df = transform(csv_path)
+    #df_to_bigquery(df)
 
-csv_path = download_local()
+
+
+
+if __name__ == '__main__':
+    download_to_bq()
